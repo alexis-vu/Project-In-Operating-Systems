@@ -1,9 +1,7 @@
+from collections import OrderedDict
 class Resource:
-    def __init__(self, id, state, units):
-        self.id = id            # resource id
-        self.state = state      # 0 - allocated, 1 - free
-        self.units = units      # number of units for resource
-        self.waitlist = []      # waitlist of processes waiting for resource
-
-    def hasUnits(self):
-        return True if self.units > 0 else False
+    def __init__(self, id, inventory):
+        self.id = id                    # resource id
+        self.inventory = inventory      # number of units
+        self.state = inventory          # number of leftover units
+        self.waitlist = OrderedDict()   # waitlist of process, unit pairs
