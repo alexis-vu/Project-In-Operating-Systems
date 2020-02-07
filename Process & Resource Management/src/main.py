@@ -46,18 +46,21 @@ def init():
 def timeout():
     global ready_list
 
-    if len(ready_list[0]) > 0:
-        proc = ready_list[0][0]
-        del ready_list[0][0]
-        ready_list[0].append(proc)
+    if len(ready_list[2]) > 0:
+        proc = ready_list[2][0]
+        del ready_list[2][0]
+        ready_list[2].append(proc)
+        pcb[proc].scheduler()
     elif len(ready_list[1]) > 0:
         proc = ready_list[1][0]
         del ready_list[1][0]
         ready_list[1].append(proc)
-    else:
-        proc = ready_list[2][0]
-        del ready_list[2][0]
-        ready_list[2].append(proc)
+        pcb[proc].scheduler()
+    elif len(ready_list[0]) > 0:
+        proc = ready_list[0][0]
+        del ready_list[0][0]
+        ready_list[0].append(proc)
+        pcb[proc].scheduler()
 
 class Process:
     def __init__(self, id, state, parent, priority):
@@ -90,8 +93,15 @@ class Process:
         if child.id in ready_list[child.priority]:
             ready_list[child.priority].remove(child.id)
 
+        if child.state == 0:
+            for resource in child.resources:
+                r = rcb[resource]
+                if child.id in r.waitlist.keys():
+                    del r.waitlist[child.id]
+
         for resource in child.resources:
-            self.release(resource, ready_list, pcb, current_proc)
+            r = rcb[resource]
+            self.release(r, r.state)
 
         pcb[child.id] = None
 
@@ -110,7 +120,11 @@ class Process:
             self.scheduler()
 
     def release(self, resource, units):
-        del self.resources[resource.id]
+        for k, v in self.resources:
+            if resource.id == k:
+                del self.resources[k]
+                break
+
         resource.state += units
         it = iter(resource.waitlist)
         while len(resource.waitlist) > 0 and resource.state > 0:
@@ -131,19 +145,14 @@ class Process:
 
         print("Resource %d released" % resource.id)
 
-
-
     def scheduler(self):
         global current_proc
-
         if len(ready_list[2]) > 0:
             current_proc = ready_list[2][0]
         elif len(ready_list[1]) > 0:
             current_proc = ready_list[1][0]
         else:
             current_proc = ready_list[0][0]
-
-        print("Process %d running" % current_proc)
 
 def main():
     global pcb
@@ -208,10 +217,12 @@ def main():
 
                 if r > 0 or r < 0:
                     continue
-                elif r not in pcb[current_proc].resources.keys():
-                    print("error")
-                    continue
                 else:
+                    for k, v in pcb[current_proc].resources:
+                        if r == k:
+                            print("error")
+                            continue
+
                     pcb[current_proc].release(rcb[r], u)
         elif command[0] == 'to':
             timeout()
@@ -222,6 +233,8 @@ def main():
             break
         else:
             continue
+
+        print("Process %d running\n" % current_proc)
 
 if __name__ == '__main__':
     main()
